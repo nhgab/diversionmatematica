@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathMaster: El Desafío</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --accent: #00cec9;
+            --bg: #dfe6e9;
+            --card: #ffffff;
+            --text: #2d3436;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .screen { display: none; }
+        .active { display: block; animation: fadeIn 0.5s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 { color: var(--primary); font-size: 2rem; margin-top: 0; }
+        p { line-height: 1.6; }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 20px;
+        }
+
+        .btn:hover { background: var(--secondary); transform: scale(1.05); }
+
+        .tutorial-box {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+            margin: 15px 0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .equation-display {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--primary);
+            letter-spacing: 2px;
+        }
+
+        input {
+            width: 80%;
+            padding: 12px;
+            font-size: 1.1rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 10px 0;
+            outline: none;
+        }
+
+        .stats { font-weight: bold; margin-bottom: 10px; color: var(--secondary); }
+        
+        .correct { color: #27ae60; font-weight: bold; }
+        .wrong { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- PANTALLA 1: BIENVENIDA -->
+        <div id="screen-home" class="screen active">
+            <h1>MathMaster 🏆</h1>
+            <p>Bienvenido al simulador de ecuaciones de 1° y 2° grado.</p>
+            <p>¿Estás listo para convertirte en un experto?</p>
+            <button class="btn" onclick="showScreen('screen-tutorial')">Ver Tutorial</button>
+        </div>
+
+        <!-- PANTALLA 2: TUTORIAL -->
+        <div id="screen-tutorial" class="screen">
+            <h1>Aprendizaje Express</h1>
+            
+            <div id="step-1" class="tutorial-step">
+                <h3>1. Ecuaciones Lineales</h3>
+                <div class="tutorial-box">
+                    Ejemplo: <strong>2x + 4 = 10</strong><br>
+                    1. Pasas el 4 restando: 10 - 4 = 6<br>
+                    2. El 2 pasa dividiendo: 6 / 2 = 3<br>
+                    <strong>Resultado: x = 3</strong>
+                </div>
+                <button class="btn" onclick="nextStep(2)">Siguiente Paso</button>
+            </div>
+
+            <div id="step-2" class="tutorial-step" style="display:none;">
+                <h3>2. Ecuaciones Cuadráticas</h3>
+                <div class="tutorial-box">
+                    Buscamos números que sumados den el del centro y multiplicados el final.<br>
+                    Ejemplo: <strong>x² - 5x + 6 = 0</strong><br>
+                    Números: 2 y 3 (porque 2+3=5 y 2*3=6).<br>
+                    <strong>Resultado: x1=2, x2=3</strong>
+                </div>
+                <button class="btn" onclick="showScreen('screen-game')">¡A jugar!</button>
+            </div>
+        </div>
+
+        <!-- PANTALLA 3: JUEGO -->
+        <div id="screen-game" class="screen">
+            <div class="stats">Puntos: <span id="score">0</span></div>
+            <div id="level-label" style="font-size: 0.9rem; color: #7f8c8d;">Nivel: 1° Grado</div>
+            <div class="equation-display" id="equation-text">x + 2 = 5</div>
+            
+            <div id="game-inputs">
+                <input type="number" id="input-1" placeholder="Respuesta para x">
+                <div id="extra-field" style="display:none;">
+                    <input type="number" id="input-2" placeholder="Respuesta para x2">
+                </div>
+            </div>
+
+            <button class="btn" onclick="evaluateAnswer()">Comprobar</button>
+            <div id="msg" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentAnswers = [];
+        let isQuadratic = false;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            if(screenId === 'screen-game') generateQuestion();
+        }
+
+        function nextStep(step) {
+            document.querySelectorAll('.tutorial-step').forEach(s => s.style.display = 'none');
+            document.getElementById('step-' + step).style.display = 'block';
+        }
+
+        function generateQuestion() {
+            const eqText = document.getElementById('equation-text');
+            const extra = document.getElementById('extra-field');
+            const levelLabel = document.getElementById('level-label');
+            const msg = document.getElementById('msg');
+            
+            msg.textContent = "";
+            document.getElementById('input-1').value = "";
+            document.getElementById('input-2').value = "";
+            
+            // Alternar dificultad
+            isQuadratic = Math.random() > 0.5;
+
+            if (!isQuadratic) {
+                levelLabel.textContent = "Nivel: 1° Grado";
+                extra.style.display = "none";
+                let a = Math.floor(Math.random() * 4) + 2; 
+                let x = Math.floor(Math.random() * 10) - 5;
+                let b = Math.floor(Math.random() * 10);
+                let c = a * x + b;
+                eqText.textContent = `${a}x + ${b} = ${c}`;
+                currentAnswers = [x];
+            } else {
+                levelLabel.textContent = "Nivel: 2° Grado";
+                extra.style.display = "block";
+                let x1 = Math.floor(Math.random() * 5);
+                let x2 = Math.floor(Math.random() * 5) + 1;
+                if(x1 === x2) x2++;
+                
+                let b = -(x1 + x2);
+                let c = x1 * x2;
+                let bStr = b < 0 ? `${b}x` : `+${b}x`;
+                let cStr = c < 0 ? `${c}` : `+${c}`;
+                
+                eqText.textContent = `x² ${bStr} ${cStr} = 0`;
+                currentAnswers = [x1, x2].sort((a,b) => a - b);
+            }
+        }
+
+        function evaluateAnswer() {
+            const ans1 = parseFloat(document.getElementById('input-1').value);
+            const msg = document.getElementById('msg');
+            let isCorrect = false;
+
+            if (!isQuadratic) {
+                if (ans1 === currentAnswers[0]) isCorrect = true;
+            } else {
+                const ans2 = parseFloat(document.getElementById('input-2').value);
+                let userAns = [ans1, ans2].sort((a,b) => a - b);
+                if (userAns[0] === currentAnswers[0] && userAns[1] === currentAnswers[1]) isCorrect = true;
+            }
+
+            if (isCorrect) {
+                msg.innerHTML = "<span class='correct'>¡Brillante! 🎉</span>";
+                score += 10;
+                document.getElementById('score').textContent = score;
+                setTimeout(generateQuestion, 1200);
+            } else {
+                msg.innerHTML = "<span class='wrong'>¡Casi! Revisa tus cálculos ❌</span>";
+            }
+        }
+    </script>
+</body>
+</html>
